@@ -1,0 +1,220 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model User {
+  id               String             @id @default(cuid())
+  email            String             @unique
+  password         String
+  name             String
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime           @updatedAt
+  ingredients      Ingredient[]
+  recipes          Recipe[]
+  inventories      Inventory[]
+  monthlyPurchases MonthlyPurchase[]
+  recipeCategories RecipeCategory[]
+  salesRecords     SalesRecord[]
+  priceHistories   IngredientPriceHistory[]
+  menus            Menu[]
+  menuSalesRecords MenuSalesRecord[]
+  accounts         Account[]
+  sessions         Session[]
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Ingredient {
+  id               String                   @id @default(cuid())
+  userId           String
+  name             String
+  unit             String
+  packageSize      Float
+  packagePrice     Float
+  createdAt        DateTime                 @default(now())
+  updatedAt        DateTime                 @updatedAt
+  user             User                     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  recipeIngredients RecipeIngredient[]
+  inventories      Inventory[]
+  monthlyPurchases MonthlyPurchase[]
+  priceHistories   IngredientPriceHistory[]
+  menuComponents   MenuComponent[]
+}
+
+model IngredientPriceHistory {
+  id           String     @id @default(cuid())
+  userId       String
+  ingredientId String
+  packagePrice Float
+  packageSize  Float
+  recordedAt   DateTime   @default(now())
+  user         User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  ingredient   Ingredient @relation(fields: [ingredientId], references: [id], onDelete: Cascade)
+}
+
+model Inventory {
+  id           String     @id @default(cuid())
+  userId       String
+  date         DateTime
+  ingredientId String
+  quantity     Float
+  note         String?
+  createdAt    DateTime   @default(now())
+  user         User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  ingredient   Ingredient @relation(fields: [ingredientId], references: [id], onDelete: Cascade)
+}
+
+model MonthlyPurchase {
+  id           String     @id @default(cuid())
+  userId       String
+  year         Int
+  month        Int
+  ingredientId String
+  quantity     Float      @default(0)
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+  user         User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  ingredient   Ingredient @relation(fields: [ingredientId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, year, month, ingredientId])
+}
+
+model RecipeCategory {
+  id        String   @id @default(cuid())
+  userId    String
+  name      String
+  color     String   @default("blue")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  recipes   Recipe[]
+  menus     Menu[]
+
+  @@unique([userId, name])
+}
+
+model Recipe {
+  id             String          @id @default(cuid())
+  userId         String
+  name           String
+  menuPrice      Float
+  description    String?
+  categoryId     String?
+  yieldQuantity  Float           @default(1)
+  yieldUnit      String          @default("g")
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  user           User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  category       RecipeCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  ingredients    RecipeIngredient[]
+  salesRecords   SalesRecord[]
+  menuComponents MenuComponent[]
+}
+
+model SalesRecord {
+  id        String   @id @default(cuid())
+  userId    String
+  year      Int
+  month     Int
+  recipeId  String
+  quantity  Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  recipe    Recipe   @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, year, month, recipeId])
+}
+
+model RecipeIngredient {
+  id           String     @id @default(cuid())
+  recipeId     String
+  ingredientId String
+  quantity     Float
+  recipe       Recipe     @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+  ingredient   Ingredient @relation(fields: [ingredientId], references: [id], onDelete: Cascade)
+
+  @@unique([recipeId, ingredientId])
+}
+
+model Menu {
+  id          String          @id @default(cuid())
+  userId      String
+  name        String
+  menuPrice   Float
+  description String?
+  categoryId  String?
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+  user        User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  category    RecipeCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  components   MenuComponent[]  @relation("MenuToComponents")
+  asSubMenu    MenuComponent[]  @relation("SubMenuRef")
+  salesRecords MenuSalesRecord[]
+}
+
+model MenuSalesRecord {
+  id        String   @id @default(cuid())
+  userId    String
+  year      Int
+  month     Int
+  menuId    String
+  quantity  Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  menu      Menu     @relation(fields: [menuId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, year, month, menuId])
+}
+
+model Setting {
+  id        String   @id @default(cuid())
+  key       String   @unique
+  value     String
+  updatedAt DateTime @updatedAt
+}
+
+model MenuComponent {
+  id           String      @id @default(cuid())
+  menuId       String
+  type         String
+  recipeId     String?
+  ingredientId String?
+  subMenuId    String?
+  quantity     Float
+  menu         Menu        @relation("MenuToComponents", fields: [menuId], references: [id], onDelete: Cascade)
+  recipe       Recipe?     @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+  ingredient   Ingredient? @relation(fields: [ingredientId], references: [id], onDelete: Cascade)
+  subMenu      Menu?       @relation("SubMenuRef", fields: [subMenuId], references: [id], onDelete: SetNull)
+}

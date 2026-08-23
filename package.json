@@ -1,0 +1,84 @@
+{
+  "name": "genka-tool",
+  "version": "1.0.0",
+  "private": true,
+  "main": "electron/main.js",
+  "scripts": {
+    "dev": "next dev",
+    "build": "prisma generate && next build",
+    "start": "next start",
+    "postinstall": "prisma generate",
+    "db:push": "prisma db push",
+    "db:studio": "prisma studio",
+    "electron:dev": "electron .",
+    "dist": "next build && node scripts/prepare-seed-db.js && electron-builder --win"
+  },
+  "build": {
+    "appId": "jp.genkatool.app",
+    "productName": "原価管理ツール",
+    "copyright": "Copyright © 2024",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "electron/**/*",
+      "package.json"
+    ],
+    "extraResources": [
+      {
+        "from": ".next/standalone",
+        "to": "server",
+        "filter": [
+          "**/*"
+        ]
+      },
+      {
+        "from": ".next/static",
+        "to": "server/.next/static"
+      },
+      {
+        "from": "prisma/seed.db",
+        "to": "seed.db"
+      }
+    ],
+    "win": {
+      "sign": null,
+      "target": [
+        {
+          "target": "dir",
+          "arch": [
+            "x64"
+          ]
+        }
+      ]
+    }
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.115.0",
+    "@auth/prisma-adapter": "^2.4.1",
+    "@prisma/client": "^5.19.0",
+    "bcryptjs": "^2.4.3",
+    "clsx": "^2.1.1",
+    "lucide-react": "^0.439.0",
+    "next": "^16.2.4",
+    "next-auth": "^4.24.8",
+    "react": "^18",
+    "react-dom": "^18",
+    "recharts": "^3.8.1",
+    "tailwind-merge": "^2.5.2"
+  },
+  "devDependencies": {
+    "@types/bcryptjs": "^2.4.6",
+    "@types/node": "^20",
+    "@types/react": "^18",
+    "@types/react-dom": "^18",
+    "autoprefixer": "^10.4.20",
+    "electron": "^34.0.0",
+    "electron-builder": "^25.0.0",
+    "postcss": "^8.4.47",
+    "prisma": "^5.19.0",
+    "tailwindcss": "^3.4.13",
+    "ts-node": "^10.9.2",
+    "typescript": "^5"
+  }
+}
