@@ -8,7 +8,9 @@ export async function POST(req: NextRequest) {
   const session = await getServerSession(authOptions);
   if (!session) return NextResponse.json({ error: "認証が必要です。" }, { status: 401 });
 
-  const setting = await prisma.setting.findUnique({ where: { key: "anthropicApiKey" } });
+  const setting = await prisma.setting.findUnique({
+    where: { userId_key: { userId: session.user.id, key: "anthropicApiKey" } },
+  });
   const apiKey = setting?.value || process.env.ANTHROPIC_API_KEY;
   if (!apiKey) {
     return NextResponse.json({ error: "APIキーが設定されていません。設定ページで登録してください。" }, { status: 400 });

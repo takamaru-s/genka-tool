@@ -86,9 +86,13 @@ export async function runMigrations() {
   await prisma.$executeRaw`
     CREATE TABLE IF NOT EXISTS "Setting" (
       "id"        TEXT     NOT NULL PRIMARY KEY,
-      "key"       TEXT     NOT NULL UNIQUE,
+      "userId"    TEXT     NOT NULL,
+      "key"       TEXT     NOT NULL,
       "value"     TEXT     NOT NULL,
-      "updatedAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+      "updatedAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      CONSTRAINT "Setting_userId_fkey"
+        FOREIGN KEY ("userId") REFERENCES "User" ("id") ON DELETE CASCADE ON UPDATE CASCADE,
+      CONSTRAINT "Setting_userId_key_key" UNIQUE ("userId", "key")
     )
   `;
 }

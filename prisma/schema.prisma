@@ -26,6 +26,7 @@ model User {
   menuSalesRecords MenuSalesRecord[]
   accounts         Account[]
   sessions         Session[]
+  settings         Setting[]
 }
 
 model Account {
@@ -200,9 +201,13 @@ model MenuSalesRecord {
 
 model Setting {
   id        String   @id @default(cuid())
-  key       String   @unique
+  userId    String
+  key       String
   value     String
   updatedAt DateTime @updatedAt
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, key])
 }
 
 model MenuComponent {

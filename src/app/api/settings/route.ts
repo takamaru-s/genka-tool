@@ -7,7 +7,9 @@ export async function GET() {
   const session = await getServerSession(authOptions);
   if (!session) return NextResponse.json({ error: "認証が必要です。" }, { status: 401 });
 
-  const setting = await prisma.setting.findUnique({ where: { key: "anthropicApiKey" } });
+  const setting = await prisma.setting.findUnique({
+    where: { userId_key: { userId: session.user.id, key: "anthropicApiKey" } },
+  });
   const value = setting?.value ?? "";
   const masked = value.length > 8 ? value.slice(0, 8) + "•".repeat(Math.min(value.length - 8, 20)) : value;
   return NextResponse.json({ hasKey: value.length > 0, masked });
@@ -23,8 +25,8 @@ export async function PUT(req: NextRequest) {
   }
 
   await prisma.setting.upsert({
-    where: { key: "anthropicApiKey" },
-    create: { id: "anthropicApiKey", key: "anthropicApiKey", value: apiKey },
+    where: { userId_key: { userId: session.user.id, key: "anthropicApiKey" } },
+    create: { id: `${session.user.id}_anthropicApiKey`, userId: session.user.id, key: "anthropicApiKey", value: apiKey },
     update: { value: apiKey },
   });
 
@@ -35,6 +37,8 @@ export async function DELETE() {
   const session = await getServerSession(authOptions);
   if (!session) return NextResponse.json({ error: "認証が必要です。" }, { status: 401 });
 
-  await prisma.setting.deleteMany({ where: { key: "anthropicApiKey" } });
+  await prisma.setting.deleteMany({
+    where: { userId: session.user.id, key: "anthropicApiKey" },
+  });
   return NextResponse.json({ success: true });
 }
