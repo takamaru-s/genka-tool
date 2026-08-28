@@ -2,7 +2,7 @@
 
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Camera, X, CheckCircle, AlertCircle, Link2 } from "lucide-react";
+import { Camera, X, CheckCircle, AlertCircle, Link2, FolderOpen } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 interface OcrItem {
@@ -27,6 +27,7 @@ interface ReceiptOcrButtonProps {
 export function ReceiptOcrButton({ ingredients }: ReceiptOcrButtonProps) {
   const router = useRouter();
   const fileRef = useRef<HTMLInputElement>(null);
+  const cameraRef = useRef<HTMLInputElement>(null);
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -145,13 +146,29 @@ export function ReceiptOcrButton({ ingredients }: ReceiptOcrButtonProps) {
                   </div>
                 )}
 
-                <input
-                  ref={fileRef}
-                  type="file"
-                  accept="image/jpeg,image/png,image/webp"
-                  onChange={handleFile}
-                  className="block w-full text-sm text-gray-600 file:mr-3 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-medium file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
-                />
+                {/* カメラ起動（スマホ背面カメラ） */}
+                <input ref={cameraRef} type="file" accept="image/jpeg,image/png,image/webp" capture="environment" onChange={handleFile} className="hidden" />
+                {/* ファイル選択 */}
+                <input ref={fileRef} type="file" accept="image/jpeg,image/png,image/webp" onChange={handleFile} className="hidden" />
+
+                <div className="flex gap-3 mt-2">
+                  <button
+                    onClick={() => cameraRef.current?.click()}
+                    className="flex-1 flex flex-col items-center gap-2 border-2 border-dashed border-blue-300 rounded-xl py-6 text-blue-700 hover:bg-blue-50 transition-colors"
+                  >
+                    <Camera className="h-8 w-8" />
+                    <span className="text-sm font-medium">カメラで撮影</span>
+                    <span className="text-xs text-blue-400">スマホ推奨</span>
+                  </button>
+                  <button
+                    onClick={() => fileRef.current?.click()}
+                    className="flex-1 flex flex-col items-center gap-2 border-2 border-dashed border-gray-300 rounded-xl py-6 text-gray-600 hover:bg-gray-50 transition-colors"
+                  >
+                    <FolderOpen className="h-8 w-8" />
+                    <span className="text-sm font-medium">ファイルを選択</span>
+                    <span className="text-xs text-gray-400">PC・ギャラリーから</span>
+                  </button>
+                </div>
 
                 {loading && (
                   <div className="mt-6 text-center py-8 text-gray-500">
@@ -229,12 +246,20 @@ export function ReceiptOcrButton({ ingredients }: ReceiptOcrButtonProps) {
                 </p>
 
                 <div className="mt-5 flex justify-between items-center">
-                  <button
-                    onClick={() => { setItems([]); setMappings([]); setError(""); setSaved(false); }}
-                    className="text-sm text-blue-700 hover:underline"
-                  >
-                    別の画像を読み取る
-                  </button>
+                  <div className="flex gap-3">
+                    <button
+                      onClick={() => { setItems([]); setMappings([]); setError(""); setSaved(false); setTimeout(() => cameraRef.current?.click(), 100); }}
+                      className="text-sm text-blue-700 hover:underline flex items-center gap-1"
+                    >
+                      <Camera className="h-3.5 w-3.5" />カメラで再撮影
+                    </button>
+                    <button
+                      onClick={() => { setItems([]); setMappings([]); setError(""); setSaved(false); setTimeout(() => fileRef.current?.click(), 100); }}
+                      className="text-sm text-gray-500 hover:underline flex items-center gap-1"
+                    >
+                      <FolderOpen className="h-3.5 w-3.5" />ファイルを選択
+                    </button>
+                  </div>
                   <div className="flex gap-3">
                     <Button variant="outline" onClick={handleClose}>閉じる</Button>
                     {!saved && (
