@@ -27,7 +27,9 @@ export async function POST(req: NextRequest) {
 
   const client = new Anthropic({ apiKey });
 
-  const message = await client.messages.create({
+  let message;
+  try {
+    message = await client.messages.create({
     model: "claude-haiku-4-5-20251001",
     max_tokens: 1024,
     messages: [
@@ -58,7 +60,12 @@ export async function POST(req: NextRequest) {
         ],
       },
     ],
-  });
+    });
+  } catch (e: unknown) {
+    const msg = e instanceof Error ? e.message : String(e);
+    console.error("Anthropic API error:", msg);
+    return NextResponse.json({ error: `AI読み取りエラー: ${msg}` }, { status: 500 });
+  }
 
   const text = message.content[0].type === "text" ? message.content[0].text : "";
 

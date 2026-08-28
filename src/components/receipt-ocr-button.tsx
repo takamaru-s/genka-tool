@@ -47,11 +47,10 @@ export function ReceiptOcrButton({ ingredients }: ReceiptOcrButtonProps) {
 
     try {
       const base64 = await toBase64(file);
-      const mediaType = (file.type || "image/jpeg") as "image/jpeg" | "image/png" | "image/webp";
       const res = await fetch("/api/ocr/receipt", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ imageBase64: base64, mediaType }),
+        body: JSON.stringify({ imageBase64: base64, mediaType: "image/jpeg" }),
       });
       const data = await res.json();
       if (!res.ok) { setError(data.error ?? "読み取りに失敗しました。"); return; }
@@ -284,12 +283,23 @@ export function ReceiptOcrButton({ ingredients }: ReceiptOcrButtonProps) {
 
 function toBase64(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => {
-      const result = reader.result as string;
-      resolve(result.split(",")[1]); // base64部分のみ
+    const img = new Image();
+    const url = URL.createObjectURL(file);
+    img.onload = () => {
+      URL.revokeObjectURL(url);
+      const MAX = 1600;
+      let { width, height } = img;
+      if (width > MAX || height > MAX) {
+        if (width > height) { height = Math.round(height * MAX / width); width = MAX; }
+        else { width = Math.round(width * MAX / height); height = MAX; }
+      }
+      const canvas = document.createElement("canvas");
+      canvas.width = width;
+      canvas.height = height;
+      canvas.getContext("2d")!.drawImage(img, 0, 0, width, height);
+      resolve(canvas.toDataURL("image/jpeg", 0.85).split(",")[1]);
     };
-    reader.onerror = reject;
-    reader.readAsDataURL(file);
+    img.onerror = reject;
+    img.src = url;
   });
 }
