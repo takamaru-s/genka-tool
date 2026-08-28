@@ -69,6 +69,36 @@ export async function GET(request: Request) {
   return NextResponse.json(rows);
 }
 
+export async function POST(request: Request) {
+  const session = await getServerSession(authOptions);
+  if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  const { year, month, items } = await request.json() as {
+    year: number;
+    month: number;
+    items: { ingredientId: string; quantity: number }[];
+  };
+
+  await Promise.all(
+    items.map(({ ingredientId, quantity }) =>
+      prisma.monthlyPurchase.upsert({
+        where: {
+          userId_year_month_ingredientId: {
+            userId: session.user.id,
+            year,
+            month,
+            ingredientId,
+          },
+        },
+        update: { quantity: { increment: quantity } },
+        create: { userId: session.user.id, year, month, ingredientId, quantity },
+      })
+    )
+  );
+
+  return NextResponse.json({ ok: true });
+}
+
 export async function PUT(request: Request) {
   const session = await getServerSession(authOptions);
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
