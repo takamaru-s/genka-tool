@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ShoppingBasket, BookOpen, UtensilsCrossed, Package } from "lucide-react";
 import { formatCurrency, formatUnitCost } from "@/lib/utils";
+import { QrCodeCard } from "@/components/qr-code-card";
 
 export default async function DashboardPage() {
   const session = await getServerSession(authOptions);
@@ -107,7 +108,9 @@ export default async function DashboardPage() {
         })}
       </div>
 
-      {recipeCount > 0 && (
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+        <div className="lg:col-span-2">
+          {recipeCount > 0 && (
         <Card>
           <CardHeader>
             <CardTitle className="text-lg">仕込み品（レシピ）原価サマリー</CardTitle>
@@ -146,6 +149,11 @@ export default async function DashboardPage() {
           </CardContent>
         </Card>
       )}
+        </div>
+        <div>
+          <QrCodeCard url={process.env.NEXTAUTH_URL ?? "https://genka-tool-one.vercel.app"} />
+        </div>
+      </div>
 
       {recipeCount === 0 && ingredientCount === 0 && (
         <Card className="border-dashed">
