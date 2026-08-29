@@ -57,4 +57,12 @@
     @apply bg-background text-foreground;
     overflow: hidden;
   }
+  input[type="text"],
+  input[type="search"],
+  input[type="email"],
+  input[type="password"],
+  input:not([type]),
+  textarea {
+    ime-mode: active;
+  }
 }
