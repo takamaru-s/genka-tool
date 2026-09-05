@@ -51,6 +51,16 @@ const config: Config = {
       },
     },
   },
+  safelist: [
+    "bg-blue-100", "text-blue-800", "border-blue-200",
+    "bg-green-100", "text-green-800", "border-green-200",
+    "bg-orange-500", "text-white", "border-orange-500",
+    "bg-red-500", "border-red-500",
+    "bg-purple-100", "text-purple-800", "border-purple-200",
+    "bg-pink-500", "border-pink-500",
+    "bg-sky-500", "border-sky-500",
+    "bg-teal-500", "border-teal-500",
+  ],
   plugins: [],
 };
 
