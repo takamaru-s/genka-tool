@@ -2,10 +2,9 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { Plus, Settings, Users, Clock, ChefHat } from "lucide-react";
+import { Plus, Settings, Users, Clock, ChefHat, RotateCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
-
 
 interface OpenSession {
   id: string;
@@ -23,27 +22,47 @@ interface Table {
   sessions: OpenSession[];
 }
 
+interface PaidSession {
+  id: string;
+  guestCount: number;
+  totalAmount: number;
+  closedAt: string;
+  table: { name: string; number: number };
+  orderItems: { quantity: number; menu: { name: string } }[];
+}
+
 function elapsed(openedAt: string) {
   const mins = Math.floor((Date.now() - new Date(openedAt).getTime()) / 60000);
   if (mins < 60) return `${mins}分`;
   return `${Math.floor(mins / 60)}時間${mins % 60}分`;
 }
 
+function timeStr(dt: string) {
+  const d = new Date(dt);
+  return `${d.getHours()}:${String(d.getMinutes()).padStart(2, "0")}`;
+}
+
 export default function PosPage() {
   const router = useRouter();
   const [tables, setTables] = useState<Table[]>([]);
+  const [paidSessions, setPaidSessions] = useState<PaidSession[]>([]);
   const [loading, setLoading] = useState(true);
   const [openModal, setOpenModal] = useState<Table | null>(null);
   const [guestCount, setGuestCount] = useState(2);
   const [opening, setOpening] = useState(false);
+  const [undoing, setUndoing] = useState<string | null>(null);
 
-  const fetchTables = useCallback(async () => {
-    const res = await fetch("/api/pos/tables");
-    if (res.ok) setTables(await res.json());
+  const fetchData = useCallback(async () => {
+    const [tablesRes, paidRes] = await Promise.all([
+      fetch("/api/pos/tables"),
+      fetch("/api/pos/sessions/today-paid"),
+    ]);
+    if (tablesRes.ok) setTables(await tablesRes.json());
+    if (paidRes.ok) setPaidSessions(await paidRes.json());
     setLoading(false);
   }, []);
 
-  useEffect(() => { fetchTables(); }, [fetchTables]);
+  useEffect(() => { fetchData(); }, [fetchData]);
 
   const handleTableClick = (table: Table) => {
     if (table.sessions.length > 0) {
@@ -69,6 +88,17 @@ export default function PosPage() {
     setOpening(false);
   };
 
+  const handleUndo = async (sessionId: string) => {
+    if (!confirm("この精算を取り消しますか？テーブルを再オープンし、売上記録から差し引きます。")) return;
+    setUndoing(sessionId);
+    const res = await fetch(`/api/pos/sessions/${sessionId}/undo`, { method: "POST" });
+    if (res.ok) {
+      await fetchData();
+      router.refresh();
+    }
+    setUndoing(null);
+  };
+
   if (loading) return (
     <div className="flex items-center justify-center h-64 text-gray-400">
       <div className="animate-spin h-8 w-8 border-4 border-blue-500 border-t-transparent rounded-full" />
@@ -83,7 +113,7 @@ export default function PosPage() {
           <p className="text-gray-500 text-sm mt-1">テーブルをタップして注文を開始</p>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" size="sm" onClick={fetchTables}>更新</Button>
+          <Button variant="outline" size="sm" onClick={fetchData}>更新</Button>
           <Link href="/settings">
             <Button variant="outline" size="sm">
               <Settings className="h-4 w-4 mr-1" />テーブル設定
@@ -138,6 +168,42 @@ export default function PosPage() {
               </button>
             );
           })}
+        </div>
+      )}
+
+      {/* 本日の精算履歴 */}
+      {paidSessions.length > 0 && (
+        <div className="mt-8">
+          <h2 className="text-sm font-semibold text-gray-600 mb-3 flex items-center gap-2">
+            <RotateCcw className="h-4 w-4" />本日の精算履歴
+          </h2>
+          <div className="space-y-2">
+            {paidSessions.map((s) => (
+              <div key={s.id} className="flex items-center gap-3 bg-white border border-gray-200 rounded-xl px-4 py-3">
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <span className="font-medium text-sm text-gray-900">{s.table.name}</span>
+                    <span className="text-xs text-gray-400">{timeStr(s.closedAt)}精算</span>
+                    <span className="text-xs text-gray-500">{s.guestCount}名</span>
+                  </div>
+                  <div className="text-xs text-gray-400 truncate">
+                    {s.orderItems.map((i) => `${i.menu.name}×${i.quantity}`).join("、")}
+                  </div>
+                </div>
+                <div className="text-sm font-bold text-amber-700 shrink-0">
+                  ¥{s.totalAmount.toLocaleString()}
+                </div>
+                <button
+                  onClick={() => handleUndo(s.id)}
+                  disabled={undoing === s.id}
+                  className="shrink-0 flex items-center gap-1 text-xs text-red-500 hover:text-red-700 border border-red-200 hover:border-red-400 rounded-lg px-2 py-1 transition-colors disabled:opacity-50"
+                >
+                  <RotateCcw className="h-3 w-3" />
+                  {undoing === s.id ? "取消中..." : "取消"}
+                </button>
+              </div>
+            ))}
+          </div>
         </div>
       )}
 
