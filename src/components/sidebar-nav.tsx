@@ -7,7 +7,7 @@ import { signOut } from "next-auth/react";
 import {
   LayoutDashboard, ShoppingBasket, BookOpen, LogOut, ChefHat,
   ClipboardList, Settings, CalendarDays, Tag, TrendingUp,
-  BarChart3, LineChart, UtensilsCrossed, Menu, X,
+  BarChart3, LineChart, UtensilsCrossed, Menu, X, MonitorSmartphone,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -17,6 +17,7 @@ interface SidebarNavProps { user: User; }
 
 const navItems = [
   { title: "ダッシュボード", href: "/dashboard", icon: LayoutDashboard },
+  { title: "POSレジ", href: "/pos", icon: MonitorSmartphone },
   { title: "食材管理", href: "/ingredients", icon: ShoppingBasket },
   { title: "レシピ管理", href: "/recipes", icon: BookOpen },
   { title: "メニュー管理", href: "/menus", icon: UtensilsCrossed },
