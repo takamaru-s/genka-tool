@@ -6,6 +6,7 @@ import { Plus, Settings, Users, Clock, ChefHat } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 
+
 interface OpenSession {
   id: string;
   guestCount: number;
@@ -83,7 +84,7 @@ export default function PosPage() {
         </div>
         <div className="flex gap-2">
           <Button variant="outline" size="sm" onClick={fetchTables}>更新</Button>
-          <Link href="/pos/tables">
+          <Link href="/settings">
             <Button variant="outline" size="sm">
               <Settings className="h-4 w-4 mr-1" />テーブル設定
             </Button>
@@ -95,7 +96,7 @@ export default function PosPage() {
         <div className="flex flex-col items-center justify-center py-20 text-center">
           <ChefHat className="h-16 w-16 text-gray-300 mb-4" />
           <p className="text-gray-500 mb-4">テーブルが登録されていません</p>
-          <Link href="/pos/tables">
+          <Link href="/settings">
             <Button className="bg-blue-700 hover:bg-blue-800">
               <Plus className="h-4 w-4 mr-2" />テーブルを追加
             </Button>

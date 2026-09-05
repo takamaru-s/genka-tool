@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Download, HardDrive, Database, FileText, Key, Eye, EyeOff, CheckCircle, Trash2, Wifi } from "lucide-react";
+import { Download, HardDrive, Database, FileText, Key, Eye, EyeOff, CheckCircle, Trash2, Wifi, LayoutGrid, Plus, Edit2, X, Check } from "lucide-react";
 
 export default function SettingsPage() {
   const [backupLoading, setBackupLoading] = useState(false);
@@ -15,6 +15,49 @@ export default function SettingsPage() {
   useEffect(() => {
     fetch("/api/lan-info").then((r) => r.json()).then((d) => setLanUrl(d.url));
   }, []);
+
+  // テーブル管理
+  interface TableRow { id: string; number: number; name: string; capacity: number; }
+  const [tables, setTables] = useState<TableRow[]>([]);
+  const [tableEditId, setTableEditId] = useState<string | null>(null);
+  const [tableEditData, setTableEditData] = useState({ number: 0, name: "", capacity: 4 });
+  const [newTable, setNewTable] = useState({ number: "", name: "", capacity: "4" });
+  const [tableAdding, setTableAdding] = useState(false);
+
+  const fetchTables = async () => {
+    const res = await fetch("/api/pos/tables");
+    if (res.ok) setTables(await res.json());
+  };
+  useEffect(() => { fetchTables(); }, []);
+
+  const handleTableAdd = async () => {
+    if (!newTable.number || !newTable.name) return;
+    setTableAdding(true);
+    await fetch("/api/pos/tables", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ number: Number(newTable.number), name: newTable.name, capacity: Number(newTable.capacity) }),
+    });
+    setNewTable({ number: "", name: "", capacity: "4" });
+    await fetchTables();
+    setTableAdding(false);
+  };
+
+  const handleTableSave = async (id: string) => {
+    await fetch(`/api/pos/tables/${id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(tableEditData),
+    });
+    setTableEditId(null);
+    fetchTables();
+  };
+
+  const handleTableDelete = async (id: string) => {
+    if (!confirm("このテーブルを削除しますか？")) return;
+    await fetch(`/api/pos/tables/${id}`, { method: "DELETE" });
+    fetchTables();
+  };
 
   const [apiKey, setApiKey] = useState("");
   const [showKey, setShowKey] = useState(false);
@@ -151,6 +194,68 @@ export default function SettingsPage() {
             {keyResult?.error && (
               <p className="text-sm text-red-600 bg-red-50 px-4 py-2 rounded">✗ {keyResult.error}</p>
             )}
+          </CardContent>
+        </Card>
+
+        {/* テーブル管理 */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <LayoutGrid className="h-5 w-5 text-amber-700" />
+              POSレジ テーブル管理
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {/* 新規追加 */}
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+              <p className="text-xs font-semibold text-blue-800 mb-2 flex items-center gap-1"><Plus className="h-3.5 w-3.5" />テーブルを追加</p>
+              <div className="grid grid-cols-3 gap-2 mb-2">
+                <div>
+                  <p className="text-xs text-gray-500 mb-1">番号</p>
+                  <Input type="number" min="1" value={newTable.number} onChange={(e) => setNewTable((p) => ({ ...p, number: e.target.value }))} placeholder="1" className="h-8 text-sm" />
+                </div>
+                <div>
+                  <p className="text-xs text-gray-500 mb-1">名前</p>
+                  <Input type="text" value={newTable.name} onChange={(e) => setNewTable((p) => ({ ...p, name: e.target.value }))} placeholder="テーブル1" className="h-8 text-sm" />
+                </div>
+                <div>
+                  <p className="text-xs text-gray-500 mb-1">席数</p>
+                  <Input type="number" min="1" value={newTable.capacity} onChange={(e) => setNewTable((p) => ({ ...p, capacity: e.target.value }))} className="h-8 text-sm" />
+                </div>
+              </div>
+              <Button onClick={handleTableAdd} disabled={tableAdding || !newTable.number || !newTable.name} size="sm" className="bg-blue-700 hover:bg-blue-800 w-full">
+                {tableAdding ? "追加中..." : "追加"}
+              </Button>
+            </div>
+
+            {/* テーブル一覧 */}
+            <div className="space-y-2">
+              {tables.length === 0 && <p className="text-sm text-gray-400 text-center py-4">テーブルが登録されていません</p>}
+              {tables.map((table) => (
+                <div key={table.id} className="border border-gray-200 rounded-lg px-3 py-2">
+                  {tableEditId === table.id ? (
+                    <div className="flex items-center gap-2">
+                      <Input type="number" value={tableEditData.number} onChange={(e) => setTableEditData((p) => ({ ...p, number: Number(e.target.value) }))} className="w-16 h-8 text-sm" />
+                      <Input type="text" value={tableEditData.name} onChange={(e) => setTableEditData((p) => ({ ...p, name: e.target.value }))} className="flex-1 h-8 text-sm" />
+                      <Input type="number" value={tableEditData.capacity} onChange={(e) => setTableEditData((p) => ({ ...p, capacity: Number(e.target.value) }))} className="w-16 h-8 text-sm" />
+                      <button onClick={() => handleTableSave(table.id)} className="text-green-600 hover:text-green-800"><Check className="h-4 w-4" /></button>
+                      <button onClick={() => setTableEditId(null)} className="text-gray-400 hover:text-gray-600"><X className="h-4 w-4" /></button>
+                    </div>
+                  ) : (
+                    <div className="flex items-center">
+                      <div className="flex-1">
+                        <span className="font-medium text-sm text-gray-900">{table.name}</span>
+                        <span className="text-xs text-gray-500 ml-2">No.{table.number} / {table.capacity}席</span>
+                      </div>
+                      <div className="flex gap-2">
+                        <button onClick={() => { setTableEditId(table.id); setTableEditData({ number: table.number, name: table.name, capacity: table.capacity }); }} className="text-gray-400 hover:text-blue-600"><Edit2 className="h-4 w-4" /></button>
+                        <button onClick={() => handleTableDelete(table.id)} className="text-gray-400 hover:text-red-600"><Trash2 className="h-4 w-4" /></button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
           </CardContent>
         </Card>
 
