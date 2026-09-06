@@ -3,7 +3,7 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { redirect } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ShoppingBasket, BookOpen, UtensilsCrossed, Package } from "lucide-react";
+import { ShoppingBasket, BookOpen, UtensilsCrossed, Package, TrendingUp, Users } from "lucide-react";
 import { formatCurrency, formatUnitCost } from "@/lib/utils";
 import { QrCodeCard } from "@/components/qr-code-card";
 
@@ -13,14 +13,25 @@ export default async function DashboardPage() {
 
   const userId = session.user.id;
 
-  const [ingredientCount, recipes, menuCount] = await Promise.all([
+  const now = new Date();
+  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+  const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+
+  const [ingredientCount, recipes, menuCount, monthlySessions] = await Promise.all([
     prisma.ingredient.count({ where: { userId } }),
     prisma.recipe.findMany({
       where: { userId },
       include: { ingredients: { include: { ingredient: true } } },
     }),
     prisma.menu.count({ where: { userId } }),
+    prisma.tableSession.findMany({
+      where: { userId, status: "paid", closedAt: { gte: monthStart, lt: monthEnd } },
+      select: { totalAmount: true, guestCount: true },
+    }),
   ]);
+
+  const monthlySales = monthlySessions.reduce((s, r) => s + r.totalAmount, 0);
+  const monthlyGuests = monthlySessions.reduce((s, r) => s + r.guestCount, 0);
 
   const recipeCount = recipes.length;
 
@@ -43,10 +54,29 @@ export default async function DashboardPage() {
 
   const totalCostSum = recipesWithCost.reduce((s, r) => s + r.totalCost, 0);
 
+  const thisMonth = `${now.getFullYear()}年${now.getMonth() + 1}月`;
+
   const stats = [
+    {
+      title: `${thisMonth}売上累計`,
+      value: formatCurrency(monthlySales),
+      sub: `${monthlySessions.length}件の精算`,
+      icon: TrendingUp,
+      color: "text-emerald-600",
+      bg: "bg-emerald-50",
+    },
+    {
+      title: `${thisMonth}来客数`,
+      value: `${monthlyGuests}名`,
+      sub: monthlySessions.length > 0 ? `平均${(monthlyGuests / monthlySessions.length).toFixed(1)}名/回` : "—",
+      icon: Users,
+      color: "text-sky-600",
+      bg: "bg-sky-50",
+    },
     {
       title: "登録食材数",
       value: `${ingredientCount}品目`,
+      sub: null,
       icon: ShoppingBasket,
       color: "text-blue-600",
       bg: "bg-blue-50",
@@ -54,6 +84,7 @@ export default async function DashboardPage() {
     {
       title: "仕込み品数（レシピ）",
       value: `${recipeCount}件`,
+      sub: null,
       icon: BookOpen,
       color: "text-purple-600",
       bg: "bg-purple-50",
@@ -61,6 +92,7 @@ export default async function DashboardPage() {
     {
       title: "仕込み品原価合計",
       value: formatCurrency(totalCostSum),
+      sub: null,
       icon: Package,
       color: "text-amber-600",
       bg: "bg-amber-50",
@@ -68,6 +100,7 @@ export default async function DashboardPage() {
     {
       title: "登録メニュー数",
       value: `${menuCount}件`,
+      sub: null,
       icon: UtensilsCrossed,
       color: "text-green-600",
       bg: "bg-green-50",
@@ -83,25 +116,28 @@ export default async function DashboardPage() {
         </p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-8">
         {stats.map((stat) => {
           const Icon = stat.icon;
           return (
             <Card key={stat.title} className="hover:shadow-md transition-shadow">
               <CardHeader className="pb-2">
                 <div className="flex items-center justify-between">
-                  <CardTitle className="text-sm font-medium text-gray-500">
+                  <CardTitle className="text-xs font-medium text-gray-500 leading-tight">
                     {stat.title}
                   </CardTitle>
-                  <div className={`${stat.bg} p-2 rounded-lg`}>
-                    <Icon className={`h-5 w-5 ${stat.color}`} />
+                  <div className={`${stat.bg} p-1.5 rounded-lg shrink-0`}>
+                    <Icon className={`h-4 w-4 ${stat.color}`} />
                   </div>
                 </div>
               </CardHeader>
               <CardContent>
-                <p className={`text-2xl font-bold ${stat.color}`}>
+                <p className={`text-xl font-bold ${stat.color}`}>
                   {stat.value}
                 </p>
+                {stat.sub && (
+                  <p className="text-xs text-gray-400 mt-0.5">{stat.sub}</p>
+                )}
               </CardContent>
             </Card>
           );
