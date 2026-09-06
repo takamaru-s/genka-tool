@@ -23,7 +23,7 @@ const navItems = [
   { title: "メニュー管理", href: "/menus", icon: UtensilsCrossed },
   { title: "カテゴリマスタ", href: "/categories", icon: Tag },
   { title: "棚卸入力", href: "/inventory", icon: ClipboardList, exact: true },
-  { title: "月間棚卸表", href: "/inventory/monthly", icon: CalendarDays },
+  { title: "月間棚卸・仕入表", href: "/inventory/monthly", icon: CalendarDays },
   { title: "出数登録", href: "/sales", icon: TrendingUp, exact: true },
   { title: "出数履歴", href: "/sales/history", icon: LineChart },
   { title: "ABC分析・原価差異", href: "/sales/analysis", icon: BarChart3 },

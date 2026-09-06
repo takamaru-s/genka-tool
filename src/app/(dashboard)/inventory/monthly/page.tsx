@@ -92,7 +92,7 @@ export default function MonthlyInventoryPage() {
     <div>
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">月間棚卸表</h1>
+          <h1 className="text-2xl font-bold text-gray-900">月間棚卸・仕入表</h1>
           <p className="text-sm text-gray-500 mt-1">
             月間使用量 = 月初在庫 + 月間仕入高 − 月末在庫
           </p>
