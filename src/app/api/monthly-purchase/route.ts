@@ -14,7 +14,8 @@ export async function GET(request: Request) {
   const startOfMonth = new Date(year, month - 1, 1);
   const endOfMonth = new Date(year, month, 0, 23, 59, 59, 999);
 
-  const [ingredients, monthlyPurchases] = await Promise.all([
+  // 4クエリで一括取得（食材数×2の並列クエリを避けてSupabase接続数上限対策）
+  const [ingredients, monthlyPurchases, openingInventories, closingInventories] = await Promise.all([
     prisma.ingredient.findMany({
       where: { userId: session.user.id },
       orderBy: { name: "asc" },
@@ -22,49 +23,48 @@ export async function GET(request: Request) {
     prisma.monthlyPurchase.findMany({
       where: { userId: session.user.id, year, month },
     }),
+    prisma.inventory.findMany({
+      where: { userId: session.user.id, date: { lt: startOfMonth } },
+      orderBy: { date: "desc" },
+    }),
+    prisma.inventory.findMany({
+      where: { userId: session.user.id, date: { gte: startOfMonth, lte: endOfMonth } },
+      orderBy: { date: "desc" },
+    }),
   ]);
 
-  const rows = await Promise.all(
-    ingredients.map(async (ing) => {
-      const [openingInventory, closingInventory] = await Promise.all([
-        prisma.inventory.findFirst({
-          where: {
-            userId: session.user.id,
-            ingredientId: ing.id,
-            date: { lt: startOfMonth },
-          },
-          orderBy: { date: "desc" },
-        }),
-        prisma.inventory.findFirst({
-          where: {
-            userId: session.user.id,
-            ingredientId: ing.id,
-            date: { gte: startOfMonth, lte: endOfMonth },
-          },
-          orderBy: { date: "desc" },
-        }),
-      ]);
+  // 食材ごとの最新棚卸をマップ化（orderBy desc なので先に見つかった方が最新）
+  const openingMap: Record<string, number> = {};
+  for (const inv of openingInventories) {
+    if (!(inv.ingredientId in openingMap)) openingMap[inv.ingredientId] = inv.quantity;
+  }
+  const closingMap: Record<string, number> = {};
+  for (const inv of closingInventories) {
+    if (!(inv.ingredientId in closingMap)) closingMap[inv.ingredientId] = inv.quantity;
+  }
+  const purchaseMap: Record<string, number> = {};
+  for (const p of monthlyPurchases) {
+    purchaseMap[p.ingredientId] = p.quantity;
+  }
 
-      const purchase = monthlyPurchases.find((p) => p.ingredientId === ing.id);
-      const unitPrice = ing.packagePrice / ing.packageSize;
-      const openingQty = openingInventory?.quantity ?? 0;
-      const closingQty = closingInventory?.quantity ?? 0;
-      const purchaseQty = purchase?.quantity ?? 0;
-      const usageQty = openingQty + purchaseQty - closingQty;
-
-      return {
-        ingredientId: ing.id,
-        name: ing.name,
-        unit: ing.unit,
-        unitPrice,
-        openingQty,
-        purchaseQty,
-        closingQty,
-        usageQty,
-        usageAmount: usageQty * unitPrice,
-      };
-    })
-  );
+  const rows = ingredients.map((ing) => {
+    const unitPrice = ing.packageSize > 0 ? ing.packagePrice / ing.packageSize : 0;
+    const openingQty = openingMap[ing.id] ?? 0;
+    const closingQty = closingMap[ing.id] ?? 0;
+    const purchaseQty = purchaseMap[ing.id] ?? 0;
+    const usageQty = openingQty + purchaseQty - closingQty;
+    return {
+      ingredientId: ing.id,
+      name: ing.name,
+      unit: ing.unit,
+      unitPrice,
+      openingQty,
+      purchaseQty,
+      closingQty,
+      usageQty,
+      usageAmount: usageQty * unitPrice,
+    };
+  });
 
   return NextResponse.json(rows);
 }
