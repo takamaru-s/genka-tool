@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { useRouter, useParams } from "next/navigation";
-import { ArrowLeft, Plus, Minus, ShoppingCart, CheckCircle } from "lucide-react";
+import { ArrowLeft, Plus, Minus, ShoppingCart, CheckCircle, XCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 interface MenuCategory { id: string; name: string; color: string; }
@@ -30,6 +30,7 @@ export default function PosOrderPage() {
   const [saving, setSaving] = useState(false);
   const [checkingOut, setCheckingOut] = useState(false);
   const [showCheckout, setShowCheckout] = useState(false);
+  const [cancelling, setCancelling] = useState(false);
   const [guestCount, setGuestCount] = useState(2);
 
   const fetchData = useCallback(async () => {
@@ -85,6 +86,14 @@ export default function PosOrderPage() {
       }),
     });
     setSaving(false);
+  };
+
+  const handleCancel = async () => {
+    if (!confirm("このテーブルのセッションをキャンセルして空席に戻しますか？")) return;
+    setCancelling(true);
+    const res = await fetch(`/api/pos/sessions/${sessionId}`, { method: "DELETE" });
+    if (res.ok) router.push("/pos");
+    setCancelling(false);
   };
 
   const handleCheckout = async () => {
@@ -223,6 +232,14 @@ export default function PosOrderPage() {
               className="w-full bg-green-600 hover:bg-green-700 text-sm">
               精算する
             </Button>
+            <button
+              onClick={handleCancel}
+              disabled={cancelling}
+              className="w-full flex items-center justify-center gap-1 text-xs text-red-400 hover:text-red-600 py-1 transition-colors disabled:opacity-50"
+            >
+              <XCircle className="h-3.5 w-3.5" />
+              {cancelling ? "キャンセル中..." : "空席に戻す（注文なし）"}
+            </button>
           </div>
         </div>
       </div>
