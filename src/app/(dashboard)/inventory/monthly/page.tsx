@@ -29,18 +29,27 @@ export default function MonthlyInventoryPage() {
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [sortDir, setSortDir] = useState<"asc" | "desc" | null>(null);
+  const [fetchError, setFetchError] = useState("");
 
   const fetchData = useCallback(async () => {
     setLoading(true);
+    setFetchError("");
     try {
       const res = await fetch(`/api/monthly-purchase?year=${year}&month=${month}`);
-      const data: MonthlyRow[] = await res.json();
-      setRows(data);
+      const data = await res.json();
+      if (!res.ok) {
+        setFetchError(`データ取得エラー: ${data.error ?? res.status}`);
+        return;
+      }
+      const rows: MonthlyRow[] = Array.isArray(data) ? data : [];
+      setRows(rows);
       const init: Record<string, string> = {};
-      data.forEach((r) => {
+      rows.forEach((r) => {
         init[r.ingredientId] = r.purchaseQty > 0 ? String(r.purchaseQty) : "";
       });
       setPurchases(init);
+    } catch (e) {
+      setFetchError(`通信エラー: ${e instanceof Error ? e.message : "不明なエラー"}`);
     } finally {
       setLoading(false);
     }
@@ -178,8 +187,17 @@ export default function MonthlyInventoryPage() {
           )}
           {loading ? (
             <div className="text-center py-12 text-gray-500">読み込み中...</div>
+          ) : fetchError ? (
+            <div className="text-center py-12">
+              <p className="text-red-600 font-medium mb-2">データを取得できませんでした</p>
+              <p className="text-xs text-gray-500">{fetchError}</p>
+              <button onClick={fetchData} className="mt-4 text-sm text-blue-700 underline">再読み込み</button>
+            </div>
           ) : rows.length === 0 ? (
-            <div className="text-center py-12 text-gray-500">食材が登録されていません。</div>
+            <div className="text-center py-12 text-gray-500">
+              <p className="mb-2">食材が登録されていません。</p>
+              <a href="/ingredients" className="text-blue-700 underline text-sm">食材管理で食材を登録する</a>
+            </div>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
