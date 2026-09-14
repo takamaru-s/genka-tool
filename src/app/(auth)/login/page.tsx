@@ -49,13 +49,13 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-amber-50 to-orange-100">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-950 to-blue-800">
       <div className="w-full max-w-md px-4">
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-amber-900">原価管理ツール</h1>
-          <p className="text-amber-700 mt-2">飲食店の原価を効率よく管理</p>
+          <h1 className="text-3xl font-bold text-white">原価管理ツール</h1>
+          <p className="text-blue-200 mt-2">飲食店の原価を効率よく管理</p>
         </div>
-        <Card className="shadow-lg">
+        <Card className="shadow-2xl border-0">
           <CardHeader>
             <CardTitle className="text-xl">ログイン</CardTitle>
             <CardDescription>
@@ -97,7 +97,7 @@ export default function LoginPage() {
             <CardFooter className="flex flex-col space-y-4">
               <Button
                 type="submit"
-                className="w-full bg-amber-800 hover:bg-amber-900"
+                className="w-full bg-blue-700 hover:bg-blue-800"
                 disabled={isLoading}
               >
                 {isLoading ? "ログイン中..." : "ログイン"}
@@ -106,7 +106,7 @@ export default function LoginPage() {
                 アカウントをお持ちでない方は{" "}
                 <Link
                   href="/register"
-                  className="text-amber-800 hover:underline font-medium"
+                  className="text-blue-700 hover:underline font-medium"
                 >
                   新規登録
                 </Link>
