@@ -7,6 +7,7 @@ import { SortableTH } from "@/components/sortable-th";
 import { DeleteRecipeButton } from "@/components/delete-recipe-button";
 import { formatCurrency, formatUnitCost } from "@/lib/utils";
 import { getCategoryColor } from "@/lib/category-colors";
+import { UtensilsCrossed, Check, AlertCircle } from "lucide-react";
 
 interface RecipeRow {
   id: string;
@@ -46,6 +47,51 @@ function sortRecipes(
         return 0;
     }
   });
+}
+
+function AddToMenuButton({ recipeId, recipeName }: { recipeId: string; recipeName: string }) {
+  const [state, setState] = useState<"idle" | "loading" | "done" | "exists" | "error">("idle");
+
+  const handle = async () => {
+    setState("loading");
+    const res = await fetch("/api/menus/from-recipe", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ recipeId }),
+    });
+    if (res.ok) {
+      setState("done");
+    } else if (res.status === 409) {
+      setState("exists");
+    } else {
+      setState("error");
+    }
+  };
+
+  if (state === "done") return (
+    <span className="flex items-center gap-1 text-xs text-green-600 font-medium px-2">
+      <Check className="h-3.5 w-3.5" />追加済
+    </span>
+  );
+  if (state === "exists") return (
+    <span className="flex items-center gap-1 text-xs text-gray-400 px-2">
+      <AlertCircle className="h-3.5 w-3.5" />登録済
+    </span>
+  );
+
+  return (
+    <Button
+      variant="outline"
+      size="sm"
+      className="text-xs text-green-700 border-green-300 hover:bg-green-50"
+      onClick={handle}
+      disabled={state === "loading"}
+      title={`「${recipeName}」をメニュー管理に追加`}
+    >
+      <UtensilsCrossed className="h-3 w-3 mr-1" />
+      {state === "loading" ? "追加中..." : "メニューに追加"}
+    </Button>
+  );
 }
 
 export function RecipesTable({ recipes }: { recipes: RecipeRow[] }) {
@@ -150,7 +196,7 @@ export function RecipesTable({ recipes }: { recipes: RecipeRow[] }) {
                     : "-"}
                 </td>
                 <td className="py-3 px-4 text-center">
-                  <div className="flex items-center justify-center gap-2">
+                  <div className="flex items-center justify-center gap-2 flex-wrap">
                     <Link href={`/recipes/${recipe.id}`}>
                       <Button variant="outline" size="sm" className="text-xs">
                         詳細
@@ -161,6 +207,7 @@ export function RecipesTable({ recipes }: { recipes: RecipeRow[] }) {
                         編集
                       </Button>
                     </Link>
+                    <AddToMenuButton recipeId={recipe.id} recipeName={recipe.name} />
                     <DeleteRecipeButton id={recipe.id} name={recipe.name} />
                   </div>
                 </td>
