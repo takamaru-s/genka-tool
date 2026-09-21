@@ -22,9 +22,11 @@ interface Ingredient {
 
 interface ReceiptOcrButtonProps {
   ingredients: Ingredient[];
+  /** 提供時：APIを直接呼ばずにアイテムをコールバックで返す（本日仕入モード） */
+  onItemsImported?: (items: { ingredientId: string; quantity: number }[]) => void;
 }
 
-export function ReceiptOcrButton({ ingredients }: ReceiptOcrButtonProps) {
+export function ReceiptOcrButton({ ingredients, onItemsImported }: ReceiptOcrButtonProps) {
   const router = useRouter();
   const fileRef = useRef<HTMLInputElement>(null);
   const cameraRef = useRef<HTMLInputElement>(null);
@@ -89,19 +91,23 @@ export function ReceiptOcrButton({ ingredients }: ReceiptOcrButtonProps) {
 
     setSaving(true);
     try {
-      // 月間仕入高に加算
-      const purchaseItems = updates.map(({ ingredientId, qty, item }) => {
+      const purchaseItems = updates.map(({ ingredientId, qty, item: _item }) => {
         const ing = ingredients.find((g) => g.id === ingredientId)!;
-        // パッケージ数 × 内容量 = 仕入量（食材の単位）
         const purchaseQty = qty * ing.packageSize;
         return { ingredientId: ingredientId!, quantity: purchaseQty };
       });
 
-      await fetch("/api/monthly-purchase", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ year, month, items: purchaseItems }),
-      });
+      if (onItemsImported) {
+        // 本日仕入モード：コールバックに渡してAPIは呼ばない
+        onItemsImported(purchaseItems);
+      } else {
+        // 通常モード：月間仕入高に直接加算
+        await fetch("/api/monthly-purchase", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ year, month, items: purchaseItems }),
+        });
+      }
 
       // 仕入価格も更新
       await Promise.all(updates.map(({ item, ingredientId, qty }) => {
@@ -160,7 +166,9 @@ export function ReceiptOcrButton({ ingredients }: ReceiptOcrButtonProps) {
               <div>
                 <h2 className="text-lg font-bold text-gray-900">レシート読み取り（OCR）</h2>
                 {items.length > 0 && (
-                  <p className="text-xs text-gray-500">{year}年{month}月の月間仕入高に加算されます</p>
+                  <p className="text-xs text-gray-500">
+                    {onItemsImported ? "本日仕入欄に反映されます" : `${year}年${month}月の月間仕入高に加算されます`}
+                  </p>
                 )}
               </div>
               <button onClick={handleClose} className="text-gray-400 hover:text-gray-600">
@@ -227,7 +235,7 @@ export function ReceiptOcrButton({ ingredients }: ReceiptOcrButtonProps) {
                 {saved && (
                   <div className="mb-4 flex items-center gap-2 text-sm text-green-700 bg-green-50 rounded-lg p-3">
                     <CheckCircle className="h-4 w-4 shrink-0" />
-                    {year}年{month}月の月間仕入高に追加しました。
+                    {onItemsImported ? "本日仕入欄に反映しました。" : `${year}年${month}月の月間仕入高に追加しました。`}
                   </div>
                 )}
 
@@ -329,7 +337,7 @@ export function ReceiptOcrButton({ ingredients }: ReceiptOcrButtonProps) {
                         disabled={saving || !selected.some((s, i) => s && !!mappings[i] && mappings[i] !== null)}
                         className="bg-blue-700 hover:bg-blue-800"
                       >
-                        {saving ? "追加中..." : "月間仕入高に追加"}
+                        {saving ? "反映中..." : onItemsImported ? "本日仕入に反映" : "月間仕入高に追加"}
                       </Button>
                     )}
                   </div>

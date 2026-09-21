@@ -58,6 +58,8 @@ export async function GET(request: Request) {
       name: ing.name,
       unit: ing.unit,
       unitPrice,
+      packageSize: ing.packageSize,
+      packagePrice: ing.packagePrice,
       openingQty,
       purchaseQty,
       closingQty,
