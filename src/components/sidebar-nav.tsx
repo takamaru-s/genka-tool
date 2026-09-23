@@ -34,7 +34,7 @@ const navItems = [
 
 function NavLinks({ pathname, onNavigate }: { pathname: string; onNavigate?: () => void }) {
   return (
-    <nav className="flex-1 p-4 space-y-1">
+    <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
       {navItems.map((item) => {
         const Icon = item.icon;
         const isActive = item.href === "/dashboard"
