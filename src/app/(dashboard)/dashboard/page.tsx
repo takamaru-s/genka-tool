@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ShoppingBasket, BookOpen, UtensilsCrossed, Package, TrendingUp, Users } from "lucide-react";
 import { formatCurrency, formatUnitCost } from "@/lib/utils";
 import { QrCodeCard } from "@/components/qr-code-card";
+import { DashboardCharts } from "@/components/dashboard-charts";
 
 export default async function DashboardPage() {
   const session = await getServerSession(authOptions);
@@ -189,6 +190,12 @@ export default async function DashboardPage() {
         <div>
           <QrCodeCard url={process.env.NEXTAUTH_URL ?? "https://genka-tool-one.vercel.app"} />
         </div>
+      </div>
+
+      {/* 前年比・月次トレンドチャート */}
+      <div className="mb-8">
+        <h2 className="text-base font-semibold text-gray-700 mb-4">売上トレンド・前年比較</h2>
+        <DashboardCharts currentMonth={now.getMonth() + 1} />
       </div>
 
       {recipeCount === 0 && ingredientCount === 0 && (
