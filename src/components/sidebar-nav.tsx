@@ -8,6 +8,7 @@ import {
   LayoutDashboard, ShoppingBasket, BookOpen, LogOut, ChefHat,
   ClipboardList, Settings, CalendarDays, Tag, TrendingUp,
   BarChart3, LineChart, UtensilsCrossed, Menu, X, MonitorSmartphone,
+  FileBarChart,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -27,6 +28,7 @@ const navItems = [
   { title: "出数登録", href: "/sales", icon: TrendingUp, exact: true },
   { title: "出数履歴", href: "/sales/history", icon: LineChart },
   { title: "ABC分析・原価差異", href: "/sales/analysis", icon: BarChart3 },
+  { title: "売上レポート", href: "/reports", icon: FileBarChart },
   { title: "設定・バックアップ", href: "/settings", icon: Settings },
 ];
 
