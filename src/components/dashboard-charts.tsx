@@ -141,7 +141,7 @@ export function DashboardCharts({ currentMonth }: { currentMonth: number }) {
             <YAxis tickFormatter={fmtCurrency} tick={{ fontSize: 11, fill: "#6b7280" }} axisLine={false} tickLine={false} width={56} />
             <Tooltip
               contentStyle={tooltipStyle}
-              formatter={(value: number, name: string) => [fmtCurrency(value), name]}
+              formatter={(value, name) => [fmtCurrency(Number(value ?? 0)), String(name)]}
             />
             <Legend wrapperStyle={{ fontSize: 12 }} />
             <Bar dataKey="前年" fill={COLOR_LAST} radius={[4, 4, 0, 0]} />
@@ -160,7 +160,7 @@ export function DashboardCharts({ currentMonth }: { currentMonth: number }) {
             <YAxis tickFormatter={fmtCurrency} tick={{ fontSize: 11, fill: "#6b7280" }} axisLine={false} tickLine={false} width={56} />
             <Tooltip
               contentStyle={tooltipStyle}
-              formatter={(value: number, name: string) => [fmtCurrency(value), name]}
+              formatter={(value, name) => [fmtCurrency(Number(value ?? 0)), String(name)]}
             />
             <Legend wrapperStyle={{ fontSize: 12 }} />
             <Line dataKey="前年客単価" name="前年" stroke={COLOR_LAST} strokeWidth={2} dot={{ r: 3, fill: COLOR_LAST, strokeWidth: 0 }} />

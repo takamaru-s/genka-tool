@@ -52,7 +52,7 @@ function SmallChart({
             <XAxis dataKey="key" tick={{ fontSize: 10, fill: "#9ca3af" }} axisLine={false} tickLine={false}
               interval="preserveStartEnd" />
             <YAxis tickFormatter={yFormatter} tick={{ fontSize: 10, fill: "#9ca3af" }} axisLine={false} tickLine={false} width={52} />
-            <Tooltip contentStyle={tooltipStyle} formatter={(v: number) => [yFormatter(v), title]} />
+            <Tooltip contentStyle={tooltipStyle} formatter={(v) => [yFormatter(Number(v ?? 0)), title]} />
             <Bar dataKey={dataKey as string} fill={color} radius={[4, 4, 0, 0]} />
           </BarChart>
         ) : (
@@ -61,7 +61,7 @@ function SmallChart({
             <XAxis dataKey="key" tick={{ fontSize: 10, fill: "#9ca3af" }} axisLine={false} tickLine={false}
               interval="preserveStartEnd" />
             <YAxis tickFormatter={yFormatter} tick={{ fontSize: 10, fill: "#9ca3af" }} axisLine={false} tickLine={false} width={52} />
-            <Tooltip contentStyle={tooltipStyle} formatter={(v: number) => [yFormatter(v), title]} />
+            <Tooltip contentStyle={tooltipStyle} formatter={(v) => [yFormatter(Number(v ?? 0)), title]} />
             <Line dataKey={dataKey as string} stroke={color} strokeWidth={2} dot={{ r: 3, fill: color, strokeWidth: 0 }} />
           </LineChart>
         )}
