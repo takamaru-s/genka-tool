@@ -24,10 +24,23 @@ interface InventoryRow {
   unitPrice: string;
 }
 
+function lastDayOfPrevMonth(): string {
+  const d = new Date();
+  d.setDate(0); // 前月の末日
+  return d.toISOString().split("T")[0];
+}
+
+function lastDayOfThisMonth(): string {
+  const d = new Date();
+  d.setMonth(d.getMonth() + 1, 0); // 今月の末日
+  return d.toISOString().split("T")[0];
+}
+
 export default function InventoryPage() {
   const router = useRouter();
   const [ingredients, setIngredients] = useState<Ingredient[]>([]);
   const [date, setDate] = useState(new Date().toISOString().split("T")[0]);
+  const [dateMode, setDateMode] = useState<"opening" | "closing" | "custom">("custom");
   const [rows, setRows] = useState<InventoryRow[]>([
     { ingredientId: "", quantity: "", note: "", unitPrice: "" },
   ]);
@@ -128,16 +141,71 @@ export default function InventoryPage() {
 
       <Card className="mb-6">
         <CardHeader>
-          <CardTitle>棚卸日</CardTitle>
+          <CardTitle>棚卸の種類と日付</CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="space-y-4">
+          {/* 用途クイック選択 */}
+          <div className="flex flex-wrap gap-3">
+            <button
+              type="button"
+              onClick={() => { setDateMode("opening"); setDate(lastDayOfPrevMonth()); }}
+              className={`px-4 py-2.5 rounded-lg border-2 text-sm font-semibold transition-colors ${
+                dateMode === "opening"
+                  ? "border-blue-600 bg-blue-50 text-blue-700"
+                  : "border-gray-200 bg-white text-gray-600 hover:border-blue-300"
+              }`}
+            >
+              📦 月初在庫（期首棚卸）
+              <span className="block text-xs font-normal mt-0.5 text-gray-500">月が始まる前の在庫を登録</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => { setDateMode("closing"); setDate(lastDayOfThisMonth()); }}
+              className={`px-4 py-2.5 rounded-lg border-2 text-sm font-semibold transition-colors ${
+                dateMode === "closing"
+                  ? "border-green-600 bg-green-50 text-green-700"
+                  : "border-gray-200 bg-white text-gray-600 hover:border-green-300"
+              }`}
+            >
+              ✅ 月末在庫（期末棚卸）
+              <span className="block text-xs font-normal mt-0.5 text-gray-500">月が終わる時点の在庫を登録</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setDateMode("custom")}
+              className={`px-4 py-2.5 rounded-lg border-2 text-sm font-semibold transition-colors ${
+                dateMode === "custom"
+                  ? "border-gray-500 bg-gray-50 text-gray-700"
+                  : "border-gray-200 bg-white text-gray-600 hover:border-gray-400"
+              }`}
+            >
+              📅 日付を指定
+              <span className="block text-xs font-normal mt-0.5 text-gray-500">任意の日付で登録</span>
+            </button>
+          </div>
+
+          {/* 用途説明 */}
+          {dateMode === "opening" && (
+            <div className="rounded-lg bg-blue-50 border border-blue-200 px-4 py-3 text-sm text-blue-800">
+              <strong>月初在庫</strong>として登録します。日付は自動的に<strong>前月末日（{lastDayOfPrevMonth()}）</strong>にセットされます。<br />
+              これにより、今月の月間棚卸・仕入表の「月初在庫」欄に反映されます。
+            </div>
+          )}
+          {dateMode === "closing" && (
+            <div className="rounded-lg bg-green-50 border border-green-200 px-4 py-3 text-sm text-green-800">
+              <strong>月末在庫</strong>として登録します。日付は自動的に<strong>今月末日（{lastDayOfThisMonth()}）</strong>にセットされます。<br />
+              これにより、今月の「月末在庫」と翌月の「月初在庫」の両方に自動反映されます。
+            </div>
+          )}
+
+          {/* 日付フィールド */}
           <div className="max-w-xs">
             <Label htmlFor="date">日付</Label>
             <Input
               id="date"
               type="date"
               value={date}
-              onChange={(e) => setDate(e.target.value)}
+              onChange={(e) => { setDate(e.target.value); setDateMode("custom"); }}
               className="mt-1"
             />
           </div>
