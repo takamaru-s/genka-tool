@@ -9,6 +9,7 @@ import { Plus, UtensilsCrossed, Pencil } from "lucide-react";
 import { formatCurrency, formatPercent, calcCostRate } from "@/lib/utils";
 import { getCategoryColor } from "@/lib/category-colors";
 import { calcMenuCost, componentInclude, ComponentForCost } from "@/lib/menu-cost";
+import { DeleteMenuButton } from "@/components/delete-menu-button";
 
 export default async function MenusPage() {
   const session = await getServerSession(authOptions);
@@ -100,11 +101,14 @@ export default async function MenusPage() {
                               <CardTitle className="text-base leading-tight">{menu.name}</CardTitle>
                               {menu.description && <p className="text-xs text-gray-500 mt-1 truncate">{menu.description}</p>}
                             </div>
-                            <Link href={`/menus/${menu.id}/edit`}>
-                              <button className="text-gray-400 hover:text-blue-600 transition-colors p-1">
-                                <Pencil className="h-4 w-4" />
-                              </button>
-                            </Link>
+                            <div className="flex items-center gap-1">
+                              <Link href={`/menus/${menu.id}/edit`}>
+                                <button className="text-gray-400 hover:text-blue-600 transition-colors p-1">
+                                  <Pencil className="h-4 w-4" />
+                                </button>
+                              </Link>
+                              <DeleteMenuButton menuId={menu.id} menuName={menu.name} />
+                            </div>
                           </div>
                         </CardHeader>
                         <CardContent>
