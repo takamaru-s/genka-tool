@@ -18,14 +18,34 @@ export async function GET(req: NextRequest) {
   const toDate   = new Date(to);
   toDate.setHours(23, 59, 59, 999);
 
-  const sessions = await prisma.tableSession.findMany({
-    where: {
-      userId: session.user.id,
-      status: "paid",
-      closedAt: { gte: fromDate, lte: toDate },
-    },
-    select: { totalAmount: true, guestCount: true, closedAt: true },
-  });
+  const fromYear  = fromDate.getFullYear();
+  const fromMonth = fromDate.getMonth() + 1;
+  const toYear    = toDate.getFullYear();
+  const toMonth   = toDate.getMonth() + 1;
+
+  const [sessions, menus, manualRecords] = await Promise.all([
+    prisma.tableSession.findMany({
+      where: {
+        userId: session.user.id,
+        status: "paid",
+        closedAt: { gte: fromDate, lte: toDate },
+      },
+      select: { totalAmount: true, guestCount: true, closedAt: true },
+    }),
+    prisma.menu.findMany({ where: { userId: session.user.id }, select: { id: true, menuPrice: true } }),
+    prisma.menuSalesRecord.findMany({
+      where: {
+        userId: session.user.id,
+        OR: Array.from({ length: (toYear - fromYear) * 12 + toMonth - fromMonth + 1 }, (_, i) => {
+          const y = fromYear + Math.floor((fromMonth - 1 + i) / 12);
+          const m = ((fromMonth - 1 + i) % 12) + 1;
+          return { year: y, month: m };
+        }),
+      },
+    }),
+  ]);
+
+  const menuPriceMap = Object.fromEntries(menus.map((m) => [m.id, m.menuPrice]));
 
   type Row = { sales: number; guests: number; sessions: number };
   const agg: Record<string, Row> = {};
@@ -40,6 +60,19 @@ export async function GET(req: NextRequest) {
     agg[key].sales    += s.totalAmount;
     agg[key].guests   += s.guestCount;
     agg[key].sessions += 1;
+  }
+
+  // 出数登録の売上を月単位で加算（日別表示の場合は月末日のキーに集約）
+  for (const r of manualRecords) {
+    const monthKey = `${r.year}-${String(r.month).padStart(2, "0")}`;
+    const key = unit === "month"
+      ? monthKey
+      : (() => {
+          const lastDay = new Date(r.year, r.month, 0).getDate();
+          return `${r.year}-${String(r.month).padStart(2, "0")}-${String(lastDay).padStart(2, "0")}`;
+        })();
+    if (!agg[key]) agg[key] = { sales: 0, guests: 0, sessions: 0 };
+    agg[key].sales += r.quantity * (menuPriceMap[r.menuId] ?? 0);
   }
 
   // 期間内の全キーを埋める（値0の日付も含める）

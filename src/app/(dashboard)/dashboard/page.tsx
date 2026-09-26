@@ -18,7 +18,10 @@ export default async function DashboardPage() {
   const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
   const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 1);
 
-  const [ingredientCount, recipes, menuCount, monthlySessions] = await Promise.all([
+  const thisYear = now.getFullYear();
+  const thisMonth = now.getMonth() + 1;
+
+  const [ingredientCount, recipes, menuCount, monthlySessions, allMenus, manualSalesRecords] = await Promise.all([
     prisma.ingredient.count({ where: { userId } }),
     prisma.recipe.findMany({
       where: { userId },
@@ -29,10 +32,17 @@ export default async function DashboardPage() {
       where: { userId, status: "paid", closedAt: { gte: monthStart, lt: monthEnd } },
       select: { totalAmount: true, guestCount: true },
     }),
+    prisma.menu.findMany({ where: { userId }, select: { id: true, menuPrice: true } }),
+    prisma.menuSalesRecord.findMany({ where: { userId, year: thisYear, month: thisMonth } }),
   ]);
 
-  const monthlySales = monthlySessions.reduce((s, r) => s + r.totalAmount, 0);
-  const monthlyGuests = monthlySessions.reduce((s, r) => s + r.guestCount, 0);
+  const menuPriceMap = Object.fromEntries(allMenus.map((m) => [m.id, m.menuPrice]));
+  const manualSales = manualSalesRecords.reduce((s, r) => s + r.quantity * (menuPriceMap[r.menuId] ?? 0), 0);
+
+  const posSales = monthlySessions.reduce((s, r) => s + r.totalAmount, 0);
+  const posGuests = monthlySessions.reduce((s, r) => s + r.guestCount, 0);
+  const monthlySales = Math.round(posSales + manualSales);
+  const monthlyGuests = posGuests;
 
   const recipeCount = recipes.length;
 
@@ -55,11 +65,11 @@ export default async function DashboardPage() {
 
   const totalCostSum = recipesWithCost.reduce((s, r) => s + r.totalCost, 0);
 
-  const thisMonth = `${now.getFullYear()}年${now.getMonth() + 1}月`;
+  const thisMonthLabel = `${now.getFullYear()}年${now.getMonth() + 1}月`;
 
   const stats = [
     {
-      title: `${thisMonth}売上累計`,
+      title: `${thisMonthLabel}売上累計`,
       value: formatCurrency(monthlySales),
       sub: `${monthlySessions.length}件の精算`,
       icon: TrendingUp,
@@ -67,7 +77,7 @@ export default async function DashboardPage() {
       bg: "bg-emerald-50",
     },
     {
-      title: `${thisMonth}来客数`,
+      title: `${thisMonthLabel}来客数`,
       value: `${monthlyGuests}名`,
       sub: monthlySessions.length > 0 ? `平均${(monthlyGuests / monthlySessions.length).toFixed(1)}名/回` : "—",
       icon: Users,
