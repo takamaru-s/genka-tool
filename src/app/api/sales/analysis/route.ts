@@ -15,25 +15,55 @@ export async function GET(request: Request) {
   const startOfMonth = new Date(year, month - 1, 1);
   const endOfMonth = new Date(year, month, 0, 23, 59, 59, 999);
 
-  const [menus, salesRecords, ingredients, monthlyPurchases] = await Promise.all([
+  const [menus, salesRecords, posOrderItems, ingredients, monthlyPurchases] = await Promise.all([
     prisma.menu.findMany({
       where: { userId: session.user.id },
       include: { category: true, components: { include: componentInclude } },
     }),
+    // 出数登録
     prisma.menuSalesRecord.findMany({
       where: { userId: session.user.id, year, month },
+    }),
+    // POS注文明細（当月精算済セッションのみ）
+    prisma.orderItem.findMany({
+      where: {
+        session: {
+          userId: session.user.id,
+          status: "paid",
+          closedAt: { gte: startOfMonth, lte: endOfMonth },
+        },
+      },
+      select: { menuId: true, quantity: true, unitPrice: true },
     }),
     prisma.ingredient.findMany({ where: { userId: session.user.id } }),
     prisma.monthlyPurchase.findMany({ where: { userId: session.user.id, year, month } }),
   ]);
 
+  // POSデータをメニューごとに集計
+  const posQtyMap: Record<string, number>   = {};
+  const posSalesMap: Record<string, number> = {};
+  for (const item of posOrderItems) {
+    posQtyMap[item.menuId]   = (posQtyMap[item.menuId]   ?? 0) + item.quantity;
+    posSalesMap[item.menuId] = (posSalesMap[item.menuId] ?? 0) + item.quantity * item.unitPrice;
+  }
+
+  // 出数登録をメニューごとに集計
+  const manualQtyMap: Record<string, number> = {};
+  for (const r of salesRecords) {
+    manualQtyMap[r.menuId] = (manualQtyMap[r.menuId] ?? 0) + r.quantity;
+  }
+
   const soldMenus = menus
     .map((menu) => {
-      const record = salesRecords.find((s) => s.menuId === menu.id);
-      const qty = record?.quantity ?? 0;
+      const posQty    = posQtyMap[menu.id]    ?? 0;
+      const manualQty = manualQtyMap[menu.id] ?? 0;
+      const totalQty  = posQty + manualQty;
+
       const unitCost = calcMenuCost(menu.components as ComponentForCost[]);
-      const revenue = menu.menuPrice * qty;
-      const stdCost = unitCost * qty;
+      // POS売上は実際の販売単価×数量、出数登録は現在のメニュー価格×数量
+      const revenue  = (posSalesMap[menu.id] ?? 0) + manualQty * menu.menuPrice;
+      const stdCost  = unitCost * totalQty;
+
       return {
         menuId: menu.id,
         name: menu.name,
@@ -41,7 +71,7 @@ export async function GET(request: Request) {
         menuPrice: menu.menuPrice,
         unitCost,
         costRate: menu.menuPrice > 0 ? (unitCost / menu.menuPrice) * 100 : 0,
-        quantity: qty,
+        quantity: totalQty,
         revenue,
         stdCost,
       };
@@ -58,21 +88,33 @@ export async function GET(request: Request) {
     return { ...r, cumulativeRatio: ratio, abc };
   });
 
+  // 実際の食材原価（在庫法）— N×2クエリを一括クエリに置換
+  const [openingInventories, closingInventories] = await Promise.all([
+    prisma.inventory.findMany({
+      where: { userId: session.user.id, date: { lt: startOfMonth } },
+      orderBy: { date: "desc" },
+    }),
+    prisma.inventory.findMany({
+      where: { userId: session.user.id, date: { gte: startOfMonth, lte: endOfMonth } },
+      orderBy: { date: "desc" },
+    }),
+  ]);
+
+  const openingMap: Record<string, number> = {};
+  for (const inv of openingInventories) {
+    if (!(inv.ingredientId in openingMap)) openingMap[inv.ingredientId] = inv.quantity;
+  }
+  const closingMap: Record<string, number> = {};
+  for (const inv of closingInventories) {
+    if (!(inv.ingredientId in closingMap)) closingMap[inv.ingredientId] = inv.quantity;
+  }
+
   let actualIngredientCost = 0;
   for (const ing of ingredients) {
     const unitPrice = ing.packagePrice / ing.packageSize;
-    const [opening, closing] = await Promise.all([
-      prisma.inventory.findFirst({
-        where: { userId: session.user.id, ingredientId: ing.id, date: { lt: startOfMonth } },
-        orderBy: { date: "desc" },
-      }),
-      prisma.inventory.findFirst({
-        where: { userId: session.user.id, ingredientId: ing.id, date: { gte: startOfMonth, lte: endOfMonth } },
-        orderBy: { date: "desc" },
-      }),
-    ]);
     const purchase = monthlyPurchases.find((p) => p.ingredientId === ing.id);
-    actualIngredientCost += ((opening?.quantity ?? 0) + (purchase?.quantity ?? 0) - (closing?.quantity ?? 0)) * unitPrice;
+    actualIngredientCost +=
+      ((openingMap[ing.id] ?? 0) + (purchase?.quantity ?? 0) - (closingMap[ing.id] ?? 0)) * unitPrice;
   }
 
   const totalStdCost = soldMenus.reduce((s, r) => s + r.stdCost, 0);
