@@ -21,7 +21,11 @@ function fmt(v: number) {
   return `¥${v.toLocaleString()}`;
 }
 function fmtAxis(v: number) {
-  return v >= 10000 ? `¥${(v / 10000).toFixed(0)}万` : `¥${v.toLocaleString()}`;
+  if (v >= 10000) {
+    const man = v / 10000;
+    return `¥${(man % 1 === 0 ? man.toFixed(0) : man.toFixed(1))}万`;
+  }
+  return `¥${v.toLocaleString()}`;
 }
 
 const tooltipStyle: React.CSSProperties = {
@@ -52,7 +56,7 @@ function SmallChart({
             <XAxis dataKey="key" tick={{ fontSize: 10, fill: "#9ca3af" }} axisLine={false} tickLine={false}
               interval="preserveStartEnd" />
             <YAxis tickFormatter={yFormatter} tick={{ fontSize: 10, fill: "#9ca3af" }} axisLine={false} tickLine={false} width={52} />
-            <Tooltip contentStyle={tooltipStyle} formatter={(v) => [yFormatter(Number(v ?? 0)), title]} />
+            <Tooltip contentStyle={tooltipStyle} formatter={(v) => [fmt(Number(v ?? 0)), title]} />
             <Bar dataKey={dataKey as string} fill={color} radius={[4, 4, 0, 0]} />
           </BarChart>
         ) : (
@@ -61,7 +65,7 @@ function SmallChart({
             <XAxis dataKey="key" tick={{ fontSize: 10, fill: "#9ca3af" }} axisLine={false} tickLine={false}
               interval="preserveStartEnd" />
             <YAxis tickFormatter={yFormatter} tick={{ fontSize: 10, fill: "#9ca3af" }} axisLine={false} tickLine={false} width={52} />
-            <Tooltip contentStyle={tooltipStyle} formatter={(v) => [yFormatter(Number(v ?? 0)), title]} />
+            <Tooltip contentStyle={tooltipStyle} formatter={(v) => [fmt(Number(v ?? 0)), title]} />
             <Line dataKey={dataKey as string} stroke={color} strokeWidth={2} dot={{ r: 3, fill: color, strokeWidth: 0 }} />
           </LineChart>
         )}
