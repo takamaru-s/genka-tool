@@ -23,6 +23,14 @@ export async function GET(req: NextRequest) {
   const toYear    = toDate.getFullYear();
   const toMonth   = toDate.getMonth() + 1;
 
+  // 対象月数を列挙
+  const monthCount = (toYear - fromYear) * 12 + toMonth - fromMonth + 1;
+  const targetMonths = Array.from({ length: monthCount }, (_, i) => {
+    const y = fromYear + Math.floor((fromMonth - 1 + i) / 12);
+    const m = ((fromMonth - 1 + i) % 12) + 1;
+    return { year: y, month: m };
+  });
+
   const [sessions, menus, manualRecords] = await Promise.all([
     prisma.tableSession.findMany({
       where: {
@@ -34,18 +42,18 @@ export async function GET(req: NextRequest) {
     }),
     prisma.menu.findMany({ where: { userId: session.user.id }, select: { id: true, menuPrice: true } }),
     prisma.menuSalesRecord.findMany({
-      where: {
-        userId: session.user.id,
-        OR: Array.from({ length: (toYear - fromYear) * 12 + toMonth - fromMonth + 1 }, (_, i) => {
-          const y = fromYear + Math.floor((fromMonth - 1 + i) / 12);
-          const m = ((fromMonth - 1 + i) % 12) + 1;
-          return { year: y, month: m };
-        }),
-      },
+      where: { userId: session.user.id, OR: targetMonths },
     }),
   ]);
 
   const menuPriceMap = Object.fromEntries(menus.map((m) => [m.id, m.menuPrice]));
+
+  // 出数登録を月キーで集計
+  const manualByMonth: Record<string, number> = {};
+  for (const r of manualRecords) {
+    const key = `${r.year}-${String(r.month).padStart(2, "0")}`;
+    manualByMonth[key] = (manualByMonth[key] ?? 0) + r.quantity * (menuPriceMap[r.menuId] ?? 0);
+  }
 
   type Row = { sales: number; guests: number; sessions: number };
   const agg: Record<string, Row> = {};
@@ -62,17 +70,13 @@ export async function GET(req: NextRequest) {
     agg[key].sessions += 1;
   }
 
-  // 出数登録の売上を月単位で加算（日別表示の場合は月末日のキーに集約）
-  for (const r of manualRecords) {
-    const monthKey = `${r.year}-${String(r.month).padStart(2, "0")}`;
-    const key = unit === "month"
-      ? monthKey
-      : (() => {
-          const lastDay = new Date(r.year, r.month, 0).getDate();
-          return `${r.year}-${String(r.month).padStart(2, "0")}-${String(lastDay).padStart(2, "0")}`;
-        })();
-    if (!agg[key]) agg[key] = { sales: 0, guests: 0, sessions: 0 };
-    agg[key].sales += r.quantity * (menuPriceMap[r.menuId] ?? 0);
+  // 月別モードのみ：出数登録を各月行に加算
+  // 日別モード：出数登録は manualSalesTotal として別途返す（日に紐づけられないため）
+  if (unit === "month") {
+    for (const [monthKey, manualSales] of Object.entries(manualByMonth)) {
+      if (!agg[monthKey]) agg[monthKey] = { sales: 0, guests: 0, sessions: 0 };
+      agg[monthKey].sales += manualSales;
+    }
   }
 
   // 期間内の全キーを埋める（値0の日付も含める）
@@ -106,5 +110,10 @@ export async function GET(req: NextRequest) {
     };
   });
 
-  return NextResponse.json({ rows, unit });
+  // 日別モードの場合のみ出数登録合計を別フィールドで返す
+  const manualSalesTotal = unit === "day"
+    ? Math.round(Object.values(manualByMonth).reduce((s, v) => s + v, 0))
+    : 0;
+
+  return NextResponse.json({ rows, unit, manualSalesTotal });
 }

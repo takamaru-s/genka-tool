@@ -79,6 +79,7 @@ export default function ReportsPage() {
   const [to, setTo]         = useState(defaultTo);
   const [unit, setUnit]     = useState<"day" | "month">("day");
   const [rows, setRows]     = useState<ReportRow[]>([]);
+  const [manualSalesTotal, setManualSalesTotal] = useState(0);
   const [loading, setLoading] = useState(false);
   const [generated, setGenerated] = useState(false);
 
@@ -89,6 +90,7 @@ export default function ReportsPage() {
       if (res.ok) {
         const data = await res.json();
         setRows(data.rows);
+        setManualSalesTotal(data.manualSalesTotal ?? 0);
         setGenerated(true);
       }
     } finally {
@@ -96,8 +98,9 @@ export default function ReportsPage() {
     }
   };
 
-  const totalSales   = rows.reduce((s, r) => s + r.sales, 0);
-  const totalGuests  = rows.reduce((s, r) => s + r.guests, 0);
+  const posSalesTotal = rows.reduce((s, r) => s + r.sales, 0);
+  const totalSales    = posSalesTotal + manualSalesTotal;
+  const totalGuests   = rows.reduce((s, r) => s + r.guests, 0);
   const totalSessions = rows.reduce((s, r) => s + r.sessions, 0);
   const avgSpendTotal = totalGuests > 0 ? Math.round(totalSales / totalGuests) : 0;
 
@@ -156,7 +159,7 @@ export default function ReportsPage() {
       {generated && rows.length > 0 && (
         <>
           {/* サマリーカード */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
             {[
               { label: "期間売上合計",   value: fmt(totalSales),         color: "text-blue-700" },
               { label: "期間来客数合計", value: `${totalGuests}名`,       color: "text-green-700" },
@@ -171,6 +174,14 @@ export default function ReportsPage() {
               </Card>
             ))}
           </div>
+
+          {/* 日別モードで出数登録がある場合の内訳注記 */}
+          {unit === "day" && manualSalesTotal > 0 && (
+            <div className="flex items-center gap-2 mb-4 px-1 text-xs text-gray-500">
+              <span className="inline-block w-2 h-2 rounded-full bg-amber-400 shrink-0" />
+              売上合計には出数登録分 <span className="font-semibold text-amber-700">{fmt(manualSalesTotal)}</span> を含みます（日別グラフには反映されません）
+            </div>
+          )}
 
           {/* チャート3枚 */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
