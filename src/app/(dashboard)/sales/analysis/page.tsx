@@ -136,9 +136,6 @@ export default function SalesAnalysisPage() {
               <CardContent className="pt-5">
                 <p className="text-xs text-gray-500 mb-1">標準原価合計</p>
                 <p className="text-xl font-bold text-orange-700">{formatCurrency(summary!.totalStdCost)}</p>
-                <p className="text-xs text-gray-400 mt-1">
-                  原価率 {formatPercent(summary!.totalRevenue > 0 ? summary!.totalStdCost / summary!.totalRevenue * 100 : 0)}
-                </p>
               </CardContent>
             </Card>
             <Card className={summary!.hasInventoryData ? "border-gray-200" : "border-gray-200 bg-gray-50"}>
@@ -174,6 +171,29 @@ export default function SalesAnalysisPage() {
                 </Card>
               </>
             )}
+            {/* 原価率カード（常に表示） */}
+            {(() => {
+              const rate = summary!.hasInventoryData
+                ? (summary!.totalRevenue > 0 ? summary!.actualIngredientCost / summary!.totalRevenue * 100 : 0)
+                : (summary!.totalRevenue > 0 ? summary!.totalStdCost / summary!.totalRevenue * 100 : 0);
+              const isHigh = rate >= 40;
+              const isMid  = rate >= 30 && rate < 40;
+              return (
+                <Card className={`col-span-2 md:col-span-1 ${isHigh ? "border-red-300 bg-red-50" : isMid ? "border-yellow-300 bg-yellow-50" : "border-green-300 bg-green-50"}`}>
+                  <CardContent className="pt-5">
+                    <p className="text-xs text-gray-500 mb-1">
+                      {summary!.hasInventoryData ? "実際原価率" : "標準原価率"}（食材費 ÷ 売上）
+                    </p>
+                    <p className={`text-2xl font-bold ${isHigh ? "text-red-700" : isMid ? "text-yellow-700" : "text-green-700"}`}>
+                      {formatPercent(rate)}
+                    </p>
+                    <p className={`text-xs mt-1 ${isHigh ? "text-red-500" : isMid ? "text-yellow-600" : "text-green-600"}`}>
+                      {isHigh ? "⚠ 要改善（目安40%超）" : isMid ? "△ 要注意（30〜40%）" : "✓ 良好（30%未満）"}
+                    </p>
+                  </CardContent>
+                </Card>
+              );
+            })()}
           </div>
 
           {/* ABC分析凡例 */}
