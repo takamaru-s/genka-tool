@@ -251,6 +251,14 @@ model OrderItem {
   menu      Menu         @relation(fields: [menuId], references: [id], onDelete: Cascade)
 }
 
+model PasswordResetToken {
+  id        String   @id @default(cuid())
+  email     String
+  token     String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+}
+
 model MenuComponent {
   id           String      @id @default(cuid())
   menuId       String
