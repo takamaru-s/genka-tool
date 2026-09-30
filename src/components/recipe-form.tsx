@@ -256,14 +256,19 @@ export function RecipeForm({ ingredients, categories, initialData }: RecipeFormP
                       disabled={isLoading}
                       className="flex-1"
                     />
-                    <Input
-                      type="text"
-                      placeholder="g"
+                    <select
                       value={yieldUnit}
                       onChange={(e) => setYieldUnit(e.target.value)}
                       disabled={isLoading}
-                      className="w-20"
-                    />
+                      className="w-24 border border-gray-200 rounded-md px-2 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                      <option value="g">g</option>
+                      <option value="kg">kg</option>
+                      <option value="ml">ml</option>
+                      <option value="L">L</option>
+                      <option value="個">個</option>
+                      <option value="人前">人前</option>
+                    </select>
                   </div>
                   <p className="text-xs text-gray-400">このレシピで何{yieldUnit || "g"}できるか入力してください</p>
                 </div>
