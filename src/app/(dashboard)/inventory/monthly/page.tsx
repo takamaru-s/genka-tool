@@ -71,10 +71,11 @@ export default function MonthlyInventoryPage() {
   const handleBulkRegister = async () => {
     const items = Object.entries(todayPurchase)
       .map(([ingredientId, v]) => ({ ingredientId, quantity: parseFloat(v) || 0 }))
-      .filter((i) => i.quantity > 0);
+      .filter((i) => i.quantity !== 0);
 
     if (items.length === 0) return;
-    if (!confirm(`${items.length}品目の本日仕入を月間仕入高に加算します。よろしいですか？`)) return;
+    const hasNegative = items.some((i) => i.quantity < 0);
+    if (!confirm(`${items.length}品目の本日仕入を月間仕入高に加算します。${hasNegative ? "\nマイナス調整が含まれています。" : ""}よろしいですか？`)) return;
 
     setRegistering(true);
     try {
@@ -229,7 +230,7 @@ export default function MonthlyInventoryPage() {
                     <th className="text-right py-3 px-3 font-semibold text-blue-700">月初在庫</th>
                     <th className="text-right py-3 px-3 font-semibold text-sky-600">
                       本日仕入
-                      <div className="text-xs font-normal text-sky-400">（入力欄）</div>
+                      <div className="text-xs font-normal text-sky-400">（±調整可）</div>
                     </th>
                     <th className="text-right py-3 px-3 font-semibold text-green-700">
                       月間仕入高
@@ -251,12 +252,11 @@ export default function MonthlyInventoryPage() {
                         <td className="py-2 px-3">
                           <Input
                             type="number"
-                            min="0"
                             step="any"
                             value={todayPurchase[row.ingredientId] ?? ""}
                             onChange={(e) => setTodayPurchase((prev) => ({ ...prev, [row.ingredientId]: e.target.value }))}
                             placeholder="0"
-                            className="text-right w-24 ml-auto focus-visible:ring-sky-500 border-sky-200"
+                            className={`text-right w-24 ml-auto focus-visible:ring-sky-500 border-sky-200 ${today < 0 ? "text-red-600" : ""}`}
                           />
                         </td>
                         <td className="py-2 px-3 text-right text-green-700 font-medium">
