@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { jstMonthStart, toJSTMonthKey } from "@/lib/jst";
 
 export async function GET(req: NextRequest) {
   const session = await getServerSession(authOptions);
@@ -16,7 +17,7 @@ export async function GET(req: NextRequest) {
       where: {
         userId: session.user.id,
         status: "paid",
-        closedAt: { gte: new Date(year - 1, 0, 1), lt: new Date(year + 1, 0, 1) },
+        closedAt: { gte: jstMonthStart(year - 1, 1), lt: jstMonthStart(year + 1, 1) },
       },
       select: { totalAmount: true, guestCount: true, closedAt: true },
     }),
@@ -34,9 +35,9 @@ export async function GET(req: NextRequest) {
 
   for (const s of sessions) {
     if (!s.closedAt) continue;
-    const y = s.closedAt.getFullYear();
-    const m = s.closedAt.getMonth() + 1;
-    const key = `${y}-${m}`;
+    const jstKey = toJSTMonthKey(s.closedAt);
+    const [ys, ms] = jstKey.split("-");
+    const key = `${ys}-${Number(ms)}`;
     if (!agg[key]) agg[key] = { sales: 0, guests: 0, sessions: 0 };
     agg[key].sales += s.totalAmount;
     agg[key].guests += s.guestCount;

@@ -2,6 +2,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { redirect } from "next/navigation";
+import { nowJST, jstMonthStart } from "@/lib/jst";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ShoppingBasket, BookOpen, UtensilsCrossed, Package, TrendingUp, Users } from "lucide-react";
 import { formatCurrency, formatUnitCost } from "@/lib/utils";
@@ -14,12 +15,9 @@ export default async function DashboardPage() {
 
   const userId = session.user.id;
 
-  const now = new Date();
-  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
-  const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 1);
-
-  const thisYear = now.getFullYear();
-  const thisMonth = now.getMonth() + 1;
+  const { year: thisYear, month: thisMonth } = nowJST();
+  const monthStart = jstMonthStart(thisYear, thisMonth);
+  const monthEnd   = jstMonthStart(thisYear, thisMonth + 1);
 
   const [ingredientCount, recipes, menuCount, monthlySessions, allMenus, manualSalesRecords] = await Promise.all([
     prisma.ingredient.count({ where: { userId } }),
@@ -65,7 +63,7 @@ export default async function DashboardPage() {
 
   const totalCostSum = recipesWithCost.reduce((s, r) => s + r.totalCost, 0);
 
-  const thisMonthLabel = `${now.getFullYear()}年${now.getMonth() + 1}月`;
+  const thisMonthLabel = `${thisYear}年${thisMonth}月`;
 
   const stats = [
     {
@@ -205,7 +203,7 @@ export default async function DashboardPage() {
       {/* 前年比・月次トレンドチャート */}
       <div className="mb-8">
         <h2 className="text-base font-semibold text-gray-700 mb-4">売上トレンド・前年比較</h2>
-        <DashboardCharts currentMonth={now.getMonth() + 1} />
+        <DashboardCharts currentMonth={thisMonth} />
       </div>
 
       {recipeCount === 0 && ingredientCount === 0 && (

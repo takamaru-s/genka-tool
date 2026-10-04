@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { parseDateJST, parseDateEndJST, toJSTDayKey, toJSTMonthKey } from "@/lib/jst";
 
 export async function GET(req: NextRequest) {
   const session = await getServerSession(authOptions);
@@ -14,14 +15,12 @@ export async function GET(req: NextRequest) {
 
   if (!from || !to) return NextResponse.json({ error: "from/to required" }, { status: 400 });
 
-  const fromDate = new Date(from);
-  const toDate   = new Date(to);
-  toDate.setHours(23, 59, 59, 999);
+  const fromDate = parseDateJST(from);
+  const toDate   = parseDateEndJST(to);
 
-  const fromYear  = fromDate.getFullYear();
-  const fromMonth = fromDate.getMonth() + 1;
-  const toYear    = toDate.getFullYear();
-  const toMonth   = toDate.getMonth() + 1;
+  // JST 年月を文字列から直接取得
+  const [fromYear, fromMonth] = from.split("-").map(Number);
+  const [toYear, toMonth]     = to.split("-").map(Number);
 
   // 対象月数を列挙
   const monthCount = (toYear - fromYear) * 12 + toMonth - fromMonth + 1;
@@ -60,10 +59,7 @@ export async function GET(req: NextRequest) {
 
   for (const s of sessions) {
     if (!s.closedAt) continue;
-    const d = s.closedAt;
-    const key = unit === "month"
-      ? `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`
-      : `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+    const key = unit === "month" ? toJSTMonthKey(s.closedAt) : toJSTDayKey(s.closedAt);
     if (!agg[key]) agg[key] = { sales: 0, guests: 0, sessions: 0 };
     agg[key].sales    += s.totalAmount;
     agg[key].guests   += s.guestCount;
@@ -82,20 +78,18 @@ export async function GET(req: NextRequest) {
   // 期間内の全キーを埋める（値0の日付も含める）
   const keys: string[] = [];
   if (unit === "month") {
-    const cur = new Date(fromDate.getFullYear(), fromDate.getMonth(), 1);
-    const end = new Date(toDate.getFullYear(), toDate.getMonth(), 1);
-    while (cur <= end) {
-      keys.push(`${cur.getFullYear()}-${String(cur.getMonth() + 1).padStart(2, "0")}`);
-      cur.setMonth(cur.getMonth() + 1);
+    let y = fromYear, m = fromMonth;
+    while (y < toYear || (y === toYear && m <= toMonth)) {
+      keys.push(`${y}-${String(m).padStart(2, "0")}`);
+      m++;
+      if (m > 12) { m = 1; y++; }
     }
   } else {
     const cur = new Date(fromDate);
-    cur.setHours(0, 0, 0, 0);
-    const end = new Date(toDate);
-    end.setHours(0, 0, 0, 0);
+    const end = parseDateJST(to);
     while (cur <= end) {
-      keys.push(`${cur.getFullYear()}-${String(cur.getMonth() + 1).padStart(2, "0")}-${String(cur.getDate()).padStart(2, "0")}`);
-      cur.setDate(cur.getDate() + 1);
+      keys.push(toJSTDayKey(cur));
+      cur.setTime(cur.getTime() + 24 * 60 * 60 * 1000);
     }
   }
 

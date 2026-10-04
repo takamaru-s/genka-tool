@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { calcMenuCost, componentInclude, ComponentForCost } from "@/lib/menu-cost";
+import { jstMonthStart, jstMonthEnd } from "@/lib/jst";
 
 export async function GET(request: Request) {
   const session = await getServerSession(authOptions);
@@ -12,8 +13,8 @@ export async function GET(request: Request) {
   const year = parseInt(searchParams.get("year") ?? String(new Date().getFullYear()));
   const month = parseInt(searchParams.get("month") ?? String(new Date().getMonth() + 1));
 
-  const startOfMonth = new Date(year, month - 1, 1);
-  const endOfMonth = new Date(year, month, 0, 23, 59, 59, 999);
+  const startOfMonth = jstMonthStart(year, month);
+  const endOfMonth   = jstMonthEnd(year, month);
 
   const [menus, salesRecords, posOrderItems, ingredients, monthlyPurchases] = await Promise.all([
     prisma.menu.findMany({
